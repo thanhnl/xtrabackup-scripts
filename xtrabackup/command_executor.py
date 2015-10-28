@@ -15,8 +15,8 @@ class CommandExecutor:
             if process.returncode != 0:
                 raise ProcessError(command, process.returncode)
 
-    def exec_filesystem_backup(self, user, password,
-                               threads, backup_directory):
+    def exec_filesystem_backup(self, user, password, threads,
+                               backup_directory, host=None):
         command = [
             'innobackupex',
             '--user=' + user,
@@ -26,10 +26,12 @@ class CommandExecutor:
             backup_directory]
         if password:
             command.append('--password=' + password)
+        if host:
+            command.append('--host=' + host)
         self.exec_command(command)
 
     def exec_incremental_backup(self, user, password,
-                                threads, lsn, backup_directory):
+                                threads, lsn, backup_directory, host=None):
         command = [
             'innobackupex',
             '--user=' + user,
@@ -42,6 +44,8 @@ class CommandExecutor:
             backup_directory]
         if password:
             command.append('--password=' + password)
+        if host:
+            command.append('--host=' + host)
         self.exec_command(command)
 
     def exec_backup_preparation(self, backup_directory, redo_logs):

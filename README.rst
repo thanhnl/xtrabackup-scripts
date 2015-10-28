@@ -27,6 +27,27 @@ You'll need to install Percona Xtrabackup on your system in order to use the too
 
 See: `Installation documentation <http://www.percona.com/doc/percona-xtrabackup/installation.html>`_
 
+Auto incremental backup
+=======================
+
+An incremental backup cycle is consisting of a full binary backup (the base backup) and one or more incremental backups containing only the data difference between it and the last backup. Auto rotation, cleaning up. No compression or archivement is made.
+
+Example::
+
+$ pyxtrabackup-inc-auto <repository> --user=<user> [options]
+
+Additional options
+------------------
+
+You can also specify the following options:
+
+* --log-file: Log file for the script (default: */var/log/mysql/pyxtrabackup.log*).
+* --out-file: Log file for innobackupex output (default: */var/log/mysql/xtrabackup.out*).
+* --backup-threads: You can specify more threads in order to backup quicker (default: 1).
+* --host: MySQL server hostname
+* --cycle: number of day per rotation
+* --keep: number of cycle to keep. If not specified, then keep everything.
+
 Full backup and restoration
 ===========================
 

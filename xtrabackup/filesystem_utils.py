@@ -1,9 +1,9 @@
 import errno
 import os
 import datetime
+import re
 from distutils import spawn
 from xtrabackup.exception import ProgramError
-from re import search
 from shutil import rmtree, move
 from glob import glob
 
@@ -56,7 +56,7 @@ def check_path_existence(path):
 def retrieve_value_from_file(path, pattern):
     with open(path) as fp:
         for line in fp:
-            value = search(pattern, line)
+            value = re.search(pattern, line)
             if value:
                 return value.group(1)
 
@@ -66,6 +66,9 @@ def write_array_to_file(path, array):
         for item in array:
             fp.write(item + '\n')
 
+def append_to_file(path, text):
+    with open(path, 'a') as fp:
+        fp.write(text + '\n')
 
 def move_file(origin_path, destination_path):
     move(origin_path, destination_path)
@@ -93,3 +96,41 @@ def split_path(path):
 def get_prefixed_file_in_dir(directory, prefix):
     files = glob(''.join([directory, '/', prefix, '*']))
     return files[0]
+
+
+def check_cycle(folders, cycle):
+    last_date = datetime.datetime.strptime(os.path.basename(folders[-1]),
+                                           "%Y%m%d")
+    if (datetime.datetime.today() - last_date) < datetime.timedelta(days=cycle):
+        return folders[-1]
+    else:
+        return None
+
+
+def has_base_backup(path):
+    for folder in glob(path + "/*"):
+        m = re.match("^(base.*)$", os.path.basename(folder))
+        if m:
+            return True
+    else:
+        return False
+
+
+def prepare_archive_folder(archive_sub_repository, prefix):
+    archive_path = ''.join([
+        archive_sub_repository,
+        '/',
+        prefix,
+        datetime.datetime.now().strftime("%Y%m%d_%H%M")])
+    return archive_path
+
+def is_valid_archive(path):
+    m = re.match("^(\d){8}$", os.path.basename(path))
+    return True if m else False
+
+def get_archive_list(path):
+    archive_folders_list = []
+    for folder in glob(path + "/*"):
+        if os.path.isdir(folder) and is_valid_archive(folder):
+            archive_folders_list.append(folder)
+    return sorted(archive_folders_list)
