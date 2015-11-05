@@ -11,35 +11,42 @@ import os
 
 class BackupToolAuto:
 
-    def __init__(self, log_file, output_file, no_compression,
-                 cycle=7, keep=None, debug=False):
+    def __init__(self, log_file, output_file,
+                 cycle=7, keep=None,
+                 fluent=False, debug=False):
         self.debug = debug
         self.cycle = int(cycle)
         self.keep = keep
         self.log_manager = log_manager.LogManager()
         self.stop_watch = timer.Timer()
-        self.setup_logging(log_file)
+        self.setup_logging(log_file, fluent)
         try:
             with open(output_file, 'a+'):
                 pass
         except Exception as error:
-            self.logger.error('Output file error: %s', str(error),
+            self.logger.error('Output file error: {}'.format(error),
                               exc_info=self.debug)
             raise
         self.command_executor = CommandExecutor(output_file)
-        self.compress = not no_compression
         self.http = HttpManager()
 
-    def setup_logging(self, log_file):
+    def setup_logging(self, log_file, fluent):
         self.logger = logging.getLogger(__name__)
         self.log_manager.attach_file_handler(self.logger, log_file)
+        if fluent:
+            try:
+                self.log_manager.attach_fluent_buffer(self.logger)
+            except Exception as error:
+                self.logger.error(
+                    "Fail to attach fluent buffer. {}".format(error),
+                    exc_info=self.debug)
 
     def check_prerequisites(self, repository):
         try:
             filesystem_utils.check_required_binaries(['innobackupex', 'tar'])
             filesystem_utils.check_path_existence(repository)
         except exception.ProgramError as error:
-            self.logger.error('Prerequisites check failed. %s', str(error),
+            self.logger.error('Prerequisites check failed. {}'.format(error),
                               exc_info=self.debug)
             raise
 
@@ -47,9 +54,10 @@ class BackupToolAuto:
         try:
             self.backup_repository = filesystem_utils.create_sub_repository(
                 repository, '')
-            self.logger.info("Prepare new repository: %s", self.backup_repository)
+            self.logger.info(
+                "Prepare new repository: {}".format(self.backup_repository))
         except Exception as error:
-            self.logger.error('Unable to create repository: %s', error,
+            self.logger.error('Unable to create repository: {}'.format(error),
                               exc_info=self.debug)
             raise
 
@@ -60,7 +68,7 @@ class BackupToolAuto:
             backup_prefix = 'base_'
         self.final_archive_folder = filesystem_utils.prepare_archive_folder(
             self.backup_repository, backup_prefix)
-        self.logger.info("Archive folder: %s", self.final_archive_folder)
+        self.logger.info("Archive folder: {}".format(self.final_archive_folder))
 
     def exec_incremental_backup(self, user, password, thread_count, host):
         self.stop_watch.start_timer()
@@ -79,8 +87,8 @@ class BackupToolAuto:
             self.clean()
             raise
         self.stop_watch.stop_timer()
-        self.logger.info("Incremental backup duration: %s",
-                         self.stop_watch.duration_in_seconds())
+        self.logger.info("Incremental backup duration: {}".format(
+            self.stop_watch.duration_in_seconds()))
 
     def exec_full_backup(self, user, password, thread_count, host=None):
         self.stop_watch.start_timer()
@@ -93,11 +101,13 @@ class BackupToolAuto:
                 host)
         except ProcessError:
             self.logger.error(
-                'An error occured during the backup process.', exc_info=self.debug)
+                'An error occured during the backup process.',
+                exc_info=self.debug)
             self.clean()
             raise
         self.stop_watch.stop_timer()
-        self.logger.info("Base backup duration: %s", self.stop_watch.duration_in_seconds())
+        self.logger.info("Base backup duration: {}".format(
+            self.stop_watch.duration_in_seconds()))
 
     def clean(self, path):
         filesystem_utils.delete_directory_if_exists(path)
@@ -119,7 +129,7 @@ class BackupToolAuto:
             self.logger.info("Incremental data saved")
         except Exception as error:
             self.logger.error(
-                'Unable to save the incremental backup data: %s', error,
+                "Unable to save the incremental backup data: {}".format(error),
                 exc_info=self.debug)
             self.clean(self.workdir)
             raise
@@ -139,7 +149,7 @@ class BackupToolAuto:
             self.logger.info("Incremental data loaded")
         except Exception as error:
             self.logger.error(
-                'Unable to load the incremental backup data: %s', error,
+                "Unable to load the incremental backup data: {}".format(error),
                 exc_info=self.debug)
             raise
 
@@ -148,17 +158,18 @@ class BackupToolAuto:
             self.archive_folders_list = filesystem_utils.get_archive_list(repository)
         except Exception as error:
             self.logger.error(
-                    'Error get archive list: %s', error,
+                    "Error get archive list: {}".format(error),
                     exc_info=self.debug)
             raise
         if len(self.archive_folders_list) > 0:
             try:
                 self.backup_repository = filesystem_utils.check_cycle(
                     self.archive_folders_list, self.cycle)
-                self.logger.info("Use repository: %s", self.backup_repository)
+                self.logger.info("Use repository: {}".format(
+                    self.backup_repository))
             except Exception as error:
                 self.logger.error(
-                    'Error scanning repository: %s', error,
+                    "Error scanning repository: {}".format(error),
                     exc_info=self.debug)
                 raise
         else:
@@ -176,10 +187,10 @@ class BackupToolAuto:
             for path in cleanup_list:
                 try:
                     self.clean(path)
-                    self.logger.info("Deleting: %s", path)
+                    self.logger.info("Deleting: {}".format(path))
                 except Exception as error:
                     self.logger.error(
-                        "Unable to delete: %s, error %s", path, error,
+                        "Unable to delete: {}, error {}".format(path, error),
                         exc_info=self.debug)
                     raise
         else:
@@ -192,7 +203,8 @@ class BackupToolAuto:
         self.check_repository(repository)
         if self.backup_repository is None:
             self.prepare_repository(repository)
-        self.backup_list_file = os.path.join(self.backup_repository, "xtrabackup_list.txt")
+        self.backup_list_file = os.path.join(self.backup_repository,
+                                             "xtrabackup_list.txt")
         self.workdir = os.path.join(self.backup_repository, "xtratmp")
         self.incremental = filesystem_utils.has_base_backup(self.backup_repository)
         self.incremental_data = os.path.join(self.backup_repository,
@@ -209,7 +221,7 @@ class BackupToolAuto:
             filesystem_utils.move_file(self.workdir, self.final_archive_folder)
             self.logger.info("Archive moved")
         except Exception as error:
-            self.logger.error('Unable to move archive folders: %s', error,
+            self.logger.error('Unable to move archive folders: {}'.format(error),
                               exc_info=self.debug)
             raise
         try:
@@ -218,15 +230,14 @@ class BackupToolAuto:
                 os.path.basename(self.final_archive_folder))
             self.logger.info("Archive folder list updated")
         except Exception as error:
-            self.logger.error('Unable to update archive folder list: %s',
-                              error,
+            self.logger.error('Unable to update archive folder list: {}'.format(error),
                               exc_info=self.debug)
             raise
         try:
             self.clean(self.workdir)
-            self.logger.info("Deleting: %s", self.workdir)
+            self.logger.info("Deleting: {}".format(self.workdir))
         except Exception as error:
-            self.logger.error('Unable to clean up working dir: %s', error,
+            self.logger.error('Unable to clean up working dir: {}'.format(error),
                               exc_info=self.debug)
             raise
         if self.keep:

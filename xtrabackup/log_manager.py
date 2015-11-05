@@ -1,6 +1,5 @@
 import logging
 
-
 class LogManager:
 
     def __init__(self):
@@ -9,6 +8,19 @@ class LogManager:
     def attach_file_handler(self, logger, log_file):
         try:
             handler = logging.FileHandler(log_file)
+        except Exception as error:
+            print(error)
+            raise error
+        handler.setLevel(logging.INFO)
+        formatter = logging.Formatter(
+            '%(asctime)s - %(levelname)s - %(message)s')
+        handler.setFormatter(formatter)
+        logger.addHandler(handler)
+
+    def attach_fluent_buffer(self, logger):
+        try:
+            handler = logging.FileHandler('/tmp/pyxtra_fluent.buffer',
+                                          mode='w')
         except Exception as error:
             print(error)
             raise error
