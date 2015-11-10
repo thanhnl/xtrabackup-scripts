@@ -84,7 +84,7 @@ class BackupToolAuto:
             self.logger.error(
                 'An error occured during the incremental backup process.',
                 exc_info=self.debug)
-            self.clean()
+            self.clean(self.workdir)
             raise
         self.stop_watch.stop_timer()
         self.logger.info("Incremental backup duration: {}".format(
@@ -103,7 +103,7 @@ class BackupToolAuto:
             self.logger.error(
                 'An error occured during the backup process.',
                 exc_info=self.debug)
-            self.clean()
+            self.clean(self.workdir)
             raise
         self.stop_watch.stop_timer()
         self.logger.info("Base backup duration: {}".format(
